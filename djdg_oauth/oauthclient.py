@@ -70,7 +70,7 @@ class OAuthClient(object):
         """
         if request.environ.get(
                 "CONTENT_TYPE") == "application/json;charset=utf-8":
-            return request.body.decode('utf-8')
+            return request.body
         elif request.method == "GET":
             return request.GET.dict()
         else:
@@ -121,10 +121,7 @@ class OAuthClient(object):
         if method == "get":
             params = parameters
         else:
-            # params = {}
-            # for k, v in parameters.items():
-            #     params[to_unicode(k)] = to_unicode(v)
-            params = json.dumps(parameters)
+            params = json.dumps(to_unicode(parameters))
         try:
             signature = getSign(params, secret)
         except Exception as e:
@@ -137,12 +134,12 @@ class OAuthClient(object):
         if method == "get":
             re = requests.Request(
                 method=method, url=url,
-                params=parameters, headers=headers_dict)
+                params=params, headers=headers_dict)
         else:
             headers_dict["Content-Type"] = "application/json;charset=utf-8"
             re = requests.Request(
                 method=method, url=url,
-                data=json.dumps(parameters), headers=headers_dict)
+                data=params, headers=headers_dict)
         pre_re = re.prepare()
         res_session = requests.Session()
         r = res_session.send(pre_re)
