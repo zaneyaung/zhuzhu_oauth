@@ -3,7 +3,6 @@ from django.conf import settings as django_settings
 import random
 import hashlib
 from .models import OauthApps
-import simplejson
 import urlparse
 import sys
 PY3 = sys.version_info[0] == 3
@@ -27,11 +26,9 @@ def createNoncestr(length=32):
 
 def formatBizQueryParaMap(paraMap, urlencode):
     """格式化参数，签名过程需要使用"""
-    print type(paraMap)
-    print type(paraMap)
+    print paraMap
     if isinstance(paraMap, (str, unicode)):
         return paraMap
-    print "here we are"
     paraMap = to_unicode(paraMap)
     slist = sorted(paraMap)
     buff = []
@@ -41,26 +38,20 @@ def formatBizQueryParaMap(paraMap, urlencode):
             # 为空直接跳过
             continue
         buff.append("{0}={1}".format(k, str(v)))
+    print "where"
     return "&".join(buff)
 
 
 def getSign(obj, secret):
-    print type(obj)
-    print obj
     """生成签名"""
     # 签名步骤一：按字典序排序参数,formatBizQueryParaMap已做
     String = formatBizQueryParaMap(obj, True)
-    print String
     # 签名步骤二：在string后加入KEY
     String = "{0}&secret={1}".format(String, secret)
-    print "a"
-    print String
-    print "b"
     # 签名步骤三：MD5加密
     String = hashlib.md5(String).hexdigest()
     # 签名步骤四：所有字符转为大写
     result_ = String.upper()
-    print result_
     return result_
 
 
@@ -111,7 +102,7 @@ def to_unicode(data, encoding='UTF-8'):
 
     if hasattr(data, '__class__'):
         try:
-            str(data)
+            data = str(data)
         except:
             pass
 

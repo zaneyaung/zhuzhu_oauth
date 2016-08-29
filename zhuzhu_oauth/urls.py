@@ -16,6 +16,13 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
+
+def test(request):
+    if request.method == "POST":
+        print "here we are..."
+
+
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^test/', test),
 ]

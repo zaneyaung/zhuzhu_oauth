@@ -16,6 +16,7 @@ log_settings = "oauthlib"
 if hasattr(django_settings, 'DJDG_AUTH'):
     log_settings = django_settings.DJDG_AUTH.get('log', log_settings)
 log = logging.getLogger(log_settings)
+from .oauthcore import to_unicode
 
 
 class Http401Response(HttpResponse):
@@ -67,11 +68,8 @@ class OAuthClient(object):
         :param request: The current django.http.HttpRequest object
         :return: provided POST parameters
         """
-        if request.environ.get("CONTENT_TYPE") == "application/json;charset=utf-8":
-            print "here we are"
-            print dir(request)
-            print request.body
-            print request.POST
+        if request.environ.get(
+                "CONTENT_TYPE") == "application/json;charset=utf-8":
             return request.body.decode('utf-8')
         elif request.method == "GET":
             return request.GET.dict()
@@ -104,8 +102,6 @@ class OAuthClient(object):
                         return
         uri, http_method, body, headers = self._extract_params(request)
         dict_body = body
-        print body
-        print type(body)
         if http_method != 'GET':
             dict_body = json.loads(body)
         if not dict_body.get("appid"):
@@ -121,33 +117,16 @@ class OAuthClient(object):
     @staticmethod
     def oauth_request(url, method, app, parameters={}, headers={}):
         secret, parameters = set_parameters(parameters, app)
-        # try:
-        #     signature, parameters = set_parameters(parameters, app)
-        #     print signature
-        # except Exception as e:
-        #     log.info(e.message)
-        #     return {"statusCode": 500, "msg": e.message}
-        log.info(parameters)
-        res_session = requests.Session()
-        if method == "get":
-            print "get"
-            re = requests.Request(
-                method=method, url=url, params=parameters)
-        else:
-            print "other method"
-            headers["Content-Type"] = "application/json;charset=utf-8"
-            re = requests.Request(
-                method=method, url=url, json=parameters, headers=headers)
 
-        pre_re = res_session.prepare_request(re)
         if method == "get":
             params = parameters
         else:
-            params = pre_re.body
-        print type(params)
+            # params = {}
+            # for k, v in parameters.items():
+            #     params[to_unicode(k)] = to_unicode(v)
+            params = json.dumps(parameters)
         try:
             signature = getSign(params, secret)
-            print signature
         except Exception as e:
             log.info(e.message)
             return {"statusCode": 500, "msg": e.message}
@@ -155,16 +134,18 @@ class OAuthClient(object):
             "Accept": "application/json",
             "Authorization": signature
         }
-        headers.update(headers_dict)
-        pre_re.prepare_headers(headers)
-        print pre_re.headers
-        send_kwargs = {
-            'timeout': 60,
-            'allow_redirects': True,
-            "verify": False
-        }
-        r = res_session.send(pre_re, **send_kwargs)
-        print 4
+        if method == "get":
+            re = requests.Request(
+                method=method, url=url,
+                params=parameters, headers=headers_dict)
+        else:
+            headers_dict["Content-Type"] = "application/json;charset=utf-8"
+            re = requests.Request(
+                method=method, url=url,
+                data=json.dumps(parameters), headers=headers_dict)
+        pre_re = re.prepare()
+        res_session = requests.Session()
+        r = res_session.send(pre_re)
         if r.status_code != 200:
             log.error(r.content)
             return {"statusCode": 500, "msg": r.content}
